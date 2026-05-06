@@ -9,13 +9,19 @@ public abstract class Furniture implements Serializable {
     private FurnitureCategory category;
     private double price;
     private FurnitureStatus status;
+    private String description;
 
     public Furniture(String name, FurnitureCategory category, double price, FurnitureStatus status) {
+        this(name, category, price, status, "");
+    }
+
+    public Furniture(String name, FurnitureCategory category, double price, FurnitureStatus status, String description) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
         this.category = category;
         this.price = price;
         this.status = status;
+        this.description = description == null ? "" : description;
     }
 
     public String getId() {
@@ -52,6 +58,14 @@ public abstract class Furniture implements Serializable {
 
     public void setStatus(FurnitureStatus status) {
         this.status = status;
+    }
+
+    public String getDescription() {
+        return description == null ? "" : description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description == null ? "" : description;
     }
 
     public boolean canBeOrdered() {

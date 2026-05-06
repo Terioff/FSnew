@@ -3,7 +3,7 @@ package com.furnistyle;
 import com.furnistyle.facade.FurniStyleFacade;
 import com.furnistyle.ui.MainFrame;
 
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 public class Main {
     public static void main(String[] args) {

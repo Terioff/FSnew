@@ -5,6 +5,10 @@ public class AccessoryFurniture extends Furniture {
         super(name, category, price, status);
     }
 
+    public AccessoryFurniture(String name, FurnitureCategory category, double price, FurnitureStatus status, String description) {
+        super(name, category, price, status, description);
+    }
+
     @Override
     public String getTypeDescription() {
         return "Аксессуар";

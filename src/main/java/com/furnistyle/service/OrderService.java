@@ -2,8 +2,8 @@ package com.furnistyle.service;
 
 import com.furnistyle.model.client.Client;
 import com.furnistyle.model.furniture.Furniture;
-import com.furnistyle.model.furniture.FurnitureStatus;
 import com.furnistyle.model.order.Order;
+import com.furnistyle.model.order.OrderItem;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ import java.util.List;
 public class OrderService implements Serializable {
     private final List<Order> orders = new ArrayList<>();
 
-    public Order createOrder(String clientName, String clientPhone, List<Furniture> selectedFurniture) {
+    public Order createOrder(String clientName, String clientPhone, List<OrderItem> orderItems) {
         if (clientName == null || clientName.isBlank()) {
             throw new IllegalArgumentException("Введите имя клиента.");
         }
@@ -22,43 +22,38 @@ public class OrderService implements Serializable {
             throw new IllegalArgumentException("Введите телефон клиента.");
         }
 
-        if (selectedFurniture == null || selectedFurniture.isEmpty()) {
+        if (!isValidInternationalPhone(clientPhone)) {
+            throw new IllegalArgumentException("Введите телефон в международном формате: плюс и от 4 до 15 цифр.");
+        }
+
+        if (orderItems == null || orderItems.isEmpty()) {
             throw new IllegalArgumentException("Выберите хотя бы одну позицию мебели.");
         }
 
-        for (Furniture furniture : selectedFurniture) {
+        for (OrderItem item : orderItems) {
+            Furniture furniture = item.getFurniture();
             if (!furniture.canBeOrdered()) {
                 throw new IllegalArgumentException("Товар недоступен для заказа: " + furniture.getName());
             }
         }
 
         Client client = new Client(clientName, clientPhone);
-        Order order = new Order(client, selectedFurniture);
+        Order order = Order.withItems(client, orderItems);
         orders.add(order);
-
-        for (Furniture furniture : selectedFurniture) {
-            if (furniture.getStatus() == FurnitureStatus.AVAILABLE) {
-                furniture.setStatus(FurnitureStatus.RESERVED);
-            }
-        }
 
         return order;
     }
 
     public void moveOrderToNextState(Order order) {
         order.moveToNextState();
-        if (order.isFinished()) {
-            markOrderFurnitureAsSold(order);
-        }
+    }
+
+    public void rollbackOrderState(Order order) {
+        order.rollbackState();
     }
 
     public void cancelOrder(Order order) {
         order.cancel();
-        for (Furniture furniture : order.getFurnitureList()) {
-            if (furniture.getStatus() == FurnitureStatus.RESERVED) {
-                furniture.setStatus(FurnitureStatus.AVAILABLE);
-            }
-        }
     }
 
     public List<Order> getAllOrders() {
@@ -90,9 +85,7 @@ public class OrderService implements Serializable {
         orders.addAll(loadedOrders);
     }
 
-    private void markOrderFurnitureAsSold(Order order) {
-        for (Furniture furniture : order.getFurnitureList()) {
-            furniture.setStatus(FurnitureStatus.SOLD);
-        }
+    private boolean isValidInternationalPhone(String phone) {
+        return phone.matches("\\+\\d{4,15}");
     }
 }

@@ -15,18 +15,27 @@ public class FurnitureService implements Serializable {
     private final FurnitureFactory furnitureFactory = new FurnitureFactory();
 
     public Furniture addFurniture(String name, FurnitureCategory category, double price, FurnitureStatus status) {
+        return addFurniture(name, category, price, status, "");
+    }
+
+    public Furniture addFurniture(String name, FurnitureCategory category, double price, FurnitureStatus status, String description) {
         validateFurnitureData(name, price);
-        Furniture furniture = furnitureFactory.createFurniture(category, name, price, status);
+        Furniture furniture = furnitureFactory.createFurniture(category, name, price, status, description);
         furnitureList.add(furniture);
         return furniture;
     }
 
     public void updateFurniture(Furniture furniture, String name, FurnitureCategory category, double price, FurnitureStatus status) {
+        updateFurniture(furniture, name, category, price, status, "");
+    }
+
+    public void updateFurniture(Furniture furniture, String name, FurnitureCategory category, double price, FurnitureStatus status, String description) {
         validateFurnitureData(name, price);
         furniture.setName(name);
         furniture.setCategory(category);
         furniture.setPrice(price);
         furniture.setStatus(status);
+        furniture.setDescription(description);
     }
 
     public void archiveFurniture(Furniture furniture) {
