@@ -25,9 +25,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static javax.swing.JOptionPane.showConfirmDialog;
+import static javax.swing.JOptionPane.showMessageDialog;
+
 
 public class MainFrame extends JFrame implements DataChangeListener {
+
     private static final Color DARK = new Color(45, 45, 45);
     private static final Color PANEL = new Color(60, 60, 60);
     private static final Color FIELD = new Color(75, 75, 75);
@@ -36,7 +38,21 @@ public class MainFrame extends JFrame implements DataChangeListener {
     private static final Color ROW_ONE = new Color(70, 70, 70);
     private static final Color ROW_TWO = new Color(82, 82, 82);
     private static final Color SELECT = new Color(115, 115, 115);
-
+    static {
+        UIManager.put("OptionPane.background", PANEL);
+        UIManager.put("OptionPane.messageForeground", TEXT);
+        UIManager.put("Panel.background", PANEL);
+        UIManager.put("TextField.background", FIELD);
+        UIManager.put("TextField.foreground", TEXT);
+        UIManager.put("Button.background", FIELD);
+        UIManager.put("Button.foreground", TEXT);
+        UIManager.put("ComboBox.background", FIELD);
+        UIManager.put("ComboBox.foreground", TEXT);
+        UIManager.put("List.background", FIELD);
+        UIManager.put("List.foreground", TEXT);
+        UIManager.put("ScrollPane.background", PANEL);
+        UIManager.put("Viewport.background", PANEL);
+    }
     private final FurniStyleFacade facade;
     private final JTable furnitureTable;
     private final JTable orderTable;
@@ -916,7 +932,7 @@ public class MainFrame extends JFrame implements DataChangeListener {
 
         try {
             facade.saveToFile(fileChooser.getSelectedFile());
-            JOptionPane.showMessageDialog(this, "Данные сохранены.");
+            showMessageDialog(this, "Данные сохранены.");
         } catch (Exception exception) {
             showError("Не удалось сохранить данные: " + exception.getMessage());
         }
@@ -931,7 +947,7 @@ public class MainFrame extends JFrame implements DataChangeListener {
 
         try {
             facade.loadFromFile(fileChooser.getSelectedFile());
-            JOptionPane.showMessageDialog(this, "Данные загружены.");
+            showMessageDialog(this, "Данные загружены.");
         } catch (Exception exception) {
             showError("Не удалось загрузить данные: " + exception.getMessage());
         }
@@ -1022,11 +1038,27 @@ public class MainFrame extends JFrame implements DataChangeListener {
     }
 
     private void styleDialog(Window dialog) {
+        if (dialog == null) return;
         dialog.setBackground(PANEL);
-        setColors(dialog);
         if (dialog instanceof JDialog) {
-            ((JDialog) dialog).getContentPane().setBackground(PANEL);
+            JDialog jd = (JDialog) dialog;
+            jd.getContentPane().setBackground(PANEL);
+            setColors(jd.getContentPane());
+            for (Component comp : jd.getContentPane().getComponents()) {
+                if (comp instanceof JOptionPane) {
+                    JOptionPane op = (JOptionPane) comp;
+                    op.setBackground(PANEL);
+                    setColors(op);
+                    Object msg = op.getMessage();
+                    if (msg instanceof Component) {
+                        setColors((Component) msg);
+                    }
+                    break;
+                }
+            }
         }
+        // Обновляем внешний вид
+        dialog.repaint();
     }
 
     private int showThemedConfirmDialog(Component parent, Object message, String title, int optionType) {
