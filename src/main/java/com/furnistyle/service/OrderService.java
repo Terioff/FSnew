@@ -31,7 +31,7 @@ public class OrderService implements Serializable {
         }
 
         for (OrderItem item : orderItems) {
-            Furniture furniture = item.getFurniture();
+            Furniture furniture = item.furniture();
             if (!furniture.canBeOrdered()) {
                 throw new IllegalArgumentException("Товар недоступен для заказа: " + furniture.getName());
             }

@@ -40,7 +40,6 @@ public class MainFrame extends JFrame implements DataChangeListener {
         installModernLookAndFeel();
     }
 
-    private final FurniStyleFacade facade;
     private final JTable furnitureTable;
     private final JTable orderTable;
     private final JLabel summaryLabel;
@@ -48,6 +47,7 @@ public class MainFrame extends JFrame implements DataChangeListener {
     private final JTextField orderSearchField;
     private final List<Furniture> displayedFurniture;
     private final List<Order> displayedOrders;
+    private final FurniStyleFacade facade;
 
     public MainFrame(FurniStyleFacade facade) {
         super("FurniStyle - мебельный салон");
@@ -549,7 +549,14 @@ public class MainFrame extends JFrame implements DataChangeListener {
             showError("Выберите мебель в таблице.");
             return;
         }
-        facade.archiveFurniture(furniture);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Отправить мебель \"" + furniture.getName() + "\" в архив?",
+                "Подтверждение архивации",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            facade.archiveFurniture(furniture);
+        }
     }
 
     private void moveSelectedOrder() {
@@ -559,10 +566,16 @@ public class MainFrame extends JFrame implements DataChangeListener {
             return;
         }
 
-        try {
-            facade.moveOrderToNextState(order);
-        } catch (RuntimeException exception) {
-            showError(exception.getMessage());
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Перевести заказ №" + order.getShortId() + " в следующий статус?",
+                "Подтверждение действия",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                facade.moveOrderToNextState(order);
+            } catch (RuntimeException exception) {
+                showError(exception.getMessage());
+            }
         }
     }
 
@@ -573,10 +586,16 @@ public class MainFrame extends JFrame implements DataChangeListener {
             return;
         }
 
-        try {
-            facade.rollbackOrderState(order);
-        } catch (RuntimeException exception) {
-            showError(exception.getMessage());
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Откатить статус заказа №" + order.getShortId() + " к предыдущему?",
+                "Подтверждение действия",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                facade.rollbackOrderState(order);
+            } catch (RuntimeException exception) {
+                showError(exception.getMessage());
+            }
         }
     }
 
@@ -587,10 +606,16 @@ public class MainFrame extends JFrame implements DataChangeListener {
             return;
         }
 
-        try {
-            facade.cancelOrder(order);
-        } catch (RuntimeException exception) {
-            showError(exception.getMessage());
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Отменить заказ №" + order.getShortId() + "? Это действие необратимо.",
+                "Подтверждение отмены",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                facade.cancelOrder(order);
+            } catch (RuntimeException exception) {
+                showError(exception.getMessage());
+            }
         }
     }
 

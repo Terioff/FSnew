@@ -98,8 +98,8 @@ public class FurniStyleFacade {
 
     public void loadFromFile(File file) throws IOException, ClassNotFoundException {
         ApplicationData data = fileStorage.load(file);
-        furnitureService.replaceAll(data.getFurnitureList());
-        orderService.replaceAll(data.getOrders());
+        furnitureService.replaceAll(data.furnitureList());
+        orderService.replaceAll(data.orders());
         notifyListeners();
     }
 

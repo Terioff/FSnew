@@ -4,27 +4,14 @@ import com.furnistyle.model.furniture.Furniture;
 
 import java.io.Serializable;
 
-public class OrderItem implements Serializable {
-    private final Furniture furniture;
-    private final int quantity;
-
-    public OrderItem(Furniture furniture, int quantity) {
+public record OrderItem(Furniture furniture, int quantity) implements Serializable {
+    public OrderItem {
         if (furniture == null) {
             throw new IllegalArgumentException("Выберите мебель для позиции заказа.");
         }
         if (quantity <= 0) {
             throw new IllegalArgumentException("Количество должно быть больше нуля.");
         }
-        this.furniture = furniture;
-        this.quantity = quantity;
-    }
-
-    public Furniture getFurniture() {
-        return furniture;
-    }
-
-    public int getQuantity() {
-        return quantity;
     }
 
     public double getTotalPrice() {

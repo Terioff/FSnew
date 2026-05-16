@@ -33,7 +33,7 @@ public class Order implements Serializable {
         this.client = client;
         this.orderItems = new ArrayList<>(orderItems);
         this.furnitureList = orderItems.stream()
-                .map(OrderItem::getFurniture)
+                .map(OrderItem::furniture)
                 .collect(Collectors.toCollection(ArrayList::new));
         this.stateHistory = new ArrayList<>();
         this.state = new NewOrderState();
@@ -121,7 +121,7 @@ public class Order implements Serializable {
         ensureOrderItems();
         int totalQuantity = 0;
         for (OrderItem item : orderItems) {
-            totalQuantity += item.getQuantity();
+            totalQuantity += item.quantity();
         }
         return totalQuantity;
     }
@@ -152,7 +152,7 @@ public class Order implements Serializable {
         }
         if (furnitureList == null) {
             furnitureList = orderItems.stream()
-                    .map(OrderItem::getFurniture)
+                    .map(OrderItem::furniture)
                     .collect(Collectors.toCollection(ArrayList::new));
         }
     }
