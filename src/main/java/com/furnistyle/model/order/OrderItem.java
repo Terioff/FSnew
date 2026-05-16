@@ -4,7 +4,7 @@ import com.furnistyle.model.furniture.Furniture;
 
 import java.io.Serializable;
 
-public record OrderItem(Furniture furniture, int quantity) implements Serializable {
+public record OrderItem(Furniture furniture, int quantity, double priceAtOrder) implements Serializable {
     public OrderItem {
         if (furniture == null) {
             throw new IllegalArgumentException("Выберите мебель для позиции заказа.");
@@ -14,11 +14,25 @@ public record OrderItem(Furniture furniture, int quantity) implements Serializab
         }
     }
 
+    public OrderItem(Furniture furniture, int quantity) {
+        this(furniture, quantity, furniture.getPrice());
+    }
+
     public double getTotalPrice() {
-        return furniture.getPrice() * quantity;
+        return priceAtOrder * quantity;
     }
 
     public String getDescription() {
-        return quantity + " × " + furniture.getName();
+        return quantity + " × " + furniture.getName() + " (" + priceAtOrder + " руб.)";
     }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public Furniture getFurniture() {
+        return furniture;
+    }
+
+
 }

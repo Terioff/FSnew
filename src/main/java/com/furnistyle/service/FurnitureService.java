@@ -19,7 +19,7 @@ public class FurnitureService implements Serializable {
     }
 
     public Furniture addFurniture(String name, FurnitureCategory category, double price, FurnitureStatus status, String description) {
-        validateFurnitureData(name, price);
+        checkFurnitureData(name, price);
         Furniture furniture = furnitureFactory.createFurniture(category, name, price, status, description);
         furnitureList.add(furniture);
         return furniture;
@@ -30,7 +30,7 @@ public class FurnitureService implements Serializable {
     }
 
     public void updateFurniture(Furniture furniture, String name, FurnitureCategory category, double price, FurnitureStatus status, String description) {
-        validateFurnitureData(name, price);
+        checkFurnitureData(name, price);
         furniture.setName(name);
         furniture.setCategory(category);
         furniture.setPrice(price);
@@ -61,7 +61,7 @@ public class FurnitureService implements Serializable {
         furnitureList.addAll(furniture);
     }
 
-    private void validateFurnitureData(String name, double price) {
+    private void checkFurnitureData(String name, double price) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Введите название мебели.");
         }

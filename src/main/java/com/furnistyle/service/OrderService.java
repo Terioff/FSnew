@@ -14,34 +14,22 @@ public class OrderService implements Serializable {
     private final List<Order> orders = new ArrayList<>();
 
     public Order createOrder(String clientName, String clientPhone, List<OrderItem> orderItems) {
-        if (clientName == null || clientName.isBlank()) {
-            throw new IllegalArgumentException("Введите имя клиента.");
-        }
-
-        if (clientPhone == null || clientPhone.isBlank()) {
-            throw new IllegalArgumentException("Введите телефон клиента.");
-        }
-
-        if (!isValidInternationalPhone(clientPhone)) {
-            throw new IllegalArgumentException("Введите телефон в международном формате: плюс и от 4 до 15 цифр.");
-        }
-
-        if (orderItems == null || orderItems.isEmpty()) {
-            throw new IllegalArgumentException("Выберите хотя бы одну позицию мебели.");
-        }
-
-        for (OrderItem item : orderItems) {
-            Furniture furniture = item.furniture();
-            if (!furniture.canBeOrdered()) {
-                throw new IllegalArgumentException("Товар недоступен для заказа: " + furniture.getName());
-            }
-        }
+        checkOrderData(clientName, clientPhone, orderItems);
+        checkOrderItems(orderItems);
 
         Client client = new Client(clientName, clientPhone);
         Order order = Order.withItems(client, orderItems);
         orders.add(order);
 
         return order;
+    }
+
+    public void updateOrder(Order order, String clientName, String clientPhone, List<OrderItem> orderItems) {
+        if (order == null) {
+            throw new IllegalArgumentException("Выберите заказ.");
+        }
+        checkOrderData(clientName, clientPhone, orderItems);
+        order.updateDetails(clientName, clientPhone, orderItems);
     }
 
     public void moveOrderToNextState(Order order) {
@@ -85,7 +73,34 @@ public class OrderService implements Serializable {
         orders.addAll(loadedOrders);
     }
 
-    private boolean isValidInternationalPhone(String phone) {
+    private void checkOrderData(String clientName, String clientPhone, List<OrderItem> orderItems) {
+        if (clientName == null || clientName.isBlank()) {
+            throw new IllegalArgumentException("Введите имя клиента.");
+        }
+
+        if (clientPhone == null || clientPhone.isBlank()) {
+            throw new IllegalArgumentException("Введите телефон клиента.");
+        }
+
+        if (!checkPhone(clientPhone)) {
+            throw new IllegalArgumentException("Введите телефон в международном формате: плюс и от 4 до 15 цифр.");
+        }
+
+        if (orderItems == null || orderItems.isEmpty()) {
+            throw new IllegalArgumentException("Выберите хотя бы одну позицию мебели.");
+        }
+    }
+
+    private void checkOrderItems(List<OrderItem> orderItems) {
+        for (OrderItem item : orderItems) {
+            Furniture furniture = item.getFurniture();
+            if (!furniture.canBeOrdered()) {
+                throw new IllegalArgumentException("Товар недоступен для заказа: " + furniture.getName());
+            }
+        }
+    }
+
+    private boolean checkPhone(String phone) {
         return phone.matches("\\+\\d{4,15}");
     }
 }

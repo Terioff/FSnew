@@ -64,6 +64,11 @@ public class FurniStyleFacade {
         return order;
     }
 
+    public void updateOrder(Order order, String clientName, String clientPhone, List<OrderItem> orderItems) {
+        orderService.updateOrder(order, clientName, clientPhone, orderItems);
+        notifyListeners();
+    }
+
     public void moveOrderToNextState(Order order) {
         orderService.moveOrderToNextState(order);
         notifyListeners();

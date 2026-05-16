@@ -9,92 +9,62 @@ import com.furnistyle.model.order.Order;
 import com.furnistyle.model.order.OrderItem;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
+import javax.swing.plaf.ColorUIResource;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+
+import static javax.swing.JOptionPane.showConfirmDialog;
 
 public class MainFrame extends JFrame implements DataChangeListener {
-    private static final Color APP_BACKGROUND = new Color(22, 23, 25);
-    private static final Color APP_BACKGROUND_DEEP = new Color(9, 10, 12);
-    private static final Color CARD_BACKGROUND = new Color(42, 43, 46);
-    private static final Color CARD_BACKGROUND_ALT = new Color(51, 52, 56);
-    private static final Color SURFACE_BACKGROUND = new Color(32, 33, 36);
-    private static final Color SURFACE_ELEVATED = new Color(61, 62, 66);
-    private static final Color BORDER_COLOR = new Color(83, 85, 91);
-    private static final Color TEXT_PRIMARY = new Color(238, 239, 241);
-    private static final Color TEXT_MUTED = new Color(178, 181, 187);
-    private static final Color PROMPT_TEXT = new Color(126, 130, 138);
-    private static final Color BUTTON_BACKGROUND = new Color(236, 237, 239);
-    private static final Color BUTTON_HOVER = new Color(190, 193, 199);
-    private static final Color INK_ACCENT = new Color(134, 138, 146);
-    private static final Color TABLE_STRIPE = new Color(38, 39, 42);
-    private static final Font TITLE_FONT = new Font("SansSerif", Font.BOLD, 26);
-    private static final Font UI_FONT = new Font("SansSerif", Font.PLAIN, 14);
+    private static final Color DARK = new Color(45, 45, 45);
+    private static final Color PANEL = new Color(60, 60, 60);
+    private static final Color FIELD = new Color(75, 75, 75);
+    private static final Color LINE = new Color(110, 110, 110);
+    private static final Color TEXT = Color.WHITE;
+    private static final Color ROW_ONE = new Color(70, 70, 70);
+    private static final Color ROW_TWO = new Color(82, 82, 82);
+    private static final Color SELECT = new Color(115, 115, 115);
 
-    static {
-        installModernLookAndFeel();
-    }
-
+    private final FurniStyleFacade facade;
     private final JTable furnitureTable;
     private final JTable orderTable;
-    private final JLabel summaryLabel;
     private final JTextField furnitureSearchField;
     private final JTextField orderSearchField;
-    private final List<Furniture> displayedFurniture;
-    private final List<Order> displayedOrders;
-    private final FurniStyleFacade facade;
+    private final List<Furniture> shownFurniture;
+    private final List<Order> shownOrders;
 
     public MainFrame(FurniStyleFacade facade) {
         super("FurniStyle - мебельный салон");
         this.facade = facade;
         this.furnitureTable = new JTable();
         this.orderTable = new JTable();
-        this.summaryLabel = new JLabel();
         this.furnitureSearchField = createSearchField("Поиск по названию, категории, статусу...");
         this.orderSearchField = createSearchField("Поиск по клиенту, телефону, позициям, статусу...");
-        this.displayedFurniture = new ArrayList<>();
-        this.displayedOrders = new ArrayList<>();
+        this.shownFurniture = new ArrayList<>();
+        this.shownOrders = new ArrayList<>();
 
         facade.addListener(this);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1080, 720);
         setMinimumSize(new Dimension(920, 620));
         setLocationRelativeTo(null);
-        PaintedPanel content = new PaintedPanel(new BorderLayout(18, 18));
-        content.setBorder(new EmptyBorder(22, 26, 22, 26));
-        setContentPane(content);
+        getContentPane().setBackground(DARK);
+        setLayout(new BorderLayout());
         add(createTopPanel(), BorderLayout.NORTH);
-        add(createTabs(), BorderLayout.CENTER);
-        add(createSummaryPanel(), BorderLayout.SOUTH);
+        add(createTablesPanel(), BorderLayout.CENTER);
         refreshTables();
-    }
-
-    private static void installModernLookAndFeel() {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {
-            UIManager.put("Panel.background", APP_BACKGROUND);
-        }
-        UIManager.put("OptionPane.background", CARD_BACKGROUND);
-        UIManager.put("OptionPane.messageForeground", TEXT_PRIMARY);
-        UIManager.put("Panel.background", CARD_BACKGROUND);
-        UIManager.put("Label.foreground", TEXT_PRIMARY);
-        UIManager.put("TextField.background", SURFACE_BACKGROUND);
-        UIManager.put("TextField.foreground", TEXT_PRIMARY);
-        UIManager.put("TextField.caretForeground", TEXT_PRIMARY);
-        UIManager.put("ComboBox.background", SURFACE_BACKGROUND);
-        UIManager.put("ComboBox.foreground", TEXT_PRIMARY);
     }
 
     @Override
@@ -103,74 +73,79 @@ public class MainFrame extends JFrame implements DataChangeListener {
     }
 
     private JPanel createTopPanel() {
-        JPanel panel = createCardPanel(new BorderLayout(16, 0));
-        JLabel mark = new JLabel("◒");
-        JLabel title = new JLabel("FurniStyle");
-        JLabel subtitle = new JLabel("монохромная студия заказной мебели · graphite edition");
-        JPanel brandPanel = new JPanel(new BorderLayout(14, 0));
-        JPanel titlePanel = new JPanel(new GridLayout(0, 1, 0, 4));
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        JButton saveButton = createModernButton("Сохранить");
-        JButton loadButton = createModernButton("Загрузить");
+        JPanel panel = createCardPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton saveButton = createButton("Сохранить базу данных");
+        JButton loadButton = createButton("Загрузить базу данных");
 
-        mark.setFont(TITLE_FONT.deriveFont(Font.BOLD, 42f));
-        mark.setForeground(TEXT_PRIMARY);
-        mark.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                new EmptyBorder(2, 10, 4, 10)
-        ));
-        title.setFont(TITLE_FONT);
-        title.setForeground(TEXT_PRIMARY);
-        subtitle.setFont(UI_FONT.deriveFont(Font.PLAIN, 13f));
-        subtitle.setForeground(TEXT_MUTED);
-        titlePanel.setOpaque(false);
-        titlePanel.add(title);
-        titlePanel.add(subtitle);
-        brandPanel.setOpaque(false);
-        brandPanel.add(mark, BorderLayout.WEST);
-        brandPanel.add(titlePanel, BorderLayout.CENTER);
-
-        actions.setOpaque(false);
-        saveButton.addActionListener(event -> saveData());
-        loadButton.addActionListener(event -> loadData());
-        actions.add(saveButton);
-        actions.add(loadButton);
-
-        panel.add(brandPanel, BorderLayout.WEST);
-        panel.add(actions, BorderLayout.EAST);
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                saveData();
+            }
+        });
+        loadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                loadData();
+            }
+        });
+        panel.add(saveButton);
+        panel.add(loadButton);
         return panel;
     }
 
-    private JTabbedPane createTabs() {
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.setFont(UI_FONT.deriveFont(Font.BOLD, 14f));
-        tabs.setBackground(APP_BACKGROUND);
-        tabs.setForeground(TEXT_PRIMARY);
-        tabs.setOpaque(false);
-        tabs.setBorder(new EmptyBorder(4, 0, 0, 0));
-        tabs.setUI(new GraphiteTabbedPaneUI());
-        tabs.addTab("Каталог мебели", createFurniturePanel());
-        tabs.addTab("Заказы", createOrderPanel());
-        return tabs;
+    private JSplitPane createTablesPanel() {
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, createFurniturePanel(), createOrderPanel());
+        splitPane.setResizeWeight(0.5);
+        splitPane.setOneTouchExpandable(true);
+        splitPane.setBackground(DARK);
+        splitPane.setForeground(TEXT);
+        return splitPane;
     }
 
     private JPanel createFurniturePanel() {
         JPanel panel = createCardPanel(new BorderLayout(0, 16));
         JPanel buttons = createActionPanel();
-        JButton addButton = createModernButton("Добавить мебель");
-        JButton editButton = createSecondaryButton("Редактировать");
-        JButton archiveButton = createSecondaryButton("В архив");
+        JButton addButton = createButton("Добавить мебель");
+        JButton editButton = createButton("Редактировать");
+        JButton archiveButton = createButton("В архив");
         JPanel topPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel headerPanel = new JPanel(new BorderLayout());
 
-        topPanel.setOpaque(false);
-        topPanel.add(createSearchPanel(furnitureSearchField), BorderLayout.NORTH);
+        JLabel headerLabel = new JLabel("Каталог мебели");
+        headerLabel.setForeground(TEXT);
+        headerPanel.setBackground(PANEL);
+        topPanel.setBackground(PANEL);
+        headerPanel.add(headerLabel, BorderLayout.NORTH);
+        headerPanel.add(createSearchPanel(furnitureSearchField), BorderLayout.CENTER);
+        topPanel.add(headerPanel, BorderLayout.NORTH);
 
-        configureTable(furnitureTable);
+        setTable(furnitureTable);
         furnitureTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        bindSearch(furnitureSearchField, this::refreshFurnitureTable);
-        addButton.addActionListener(event -> showFurnitureDialog(null));
-        editButton.addActionListener(event -> editSelectedFurniture());
-        archiveButton.addActionListener(event -> archiveSelectedFurniture());
+        bindSearch(furnitureSearchField, new Runnable() {
+            @Override
+            public void run() {
+                refreshFurnitureTable();
+            }
+        });
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                showFurnitureDialog(null);
+            }
+        });
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                editSelectedFurniture();
+            }
+        });
+        archiveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                archiveSelectedFurniture();
+            }
+        });
 
         buttons.add(addButton);
         buttons.add(editButton);
@@ -184,24 +159,63 @@ public class MainFrame extends JFrame implements DataChangeListener {
     private JPanel createOrderPanel() {
         JPanel panel = createCardPanel(new BorderLayout(0, 16));
         JPanel buttons = createActionPanel();
-        JButton addButton = createModernButton("Создать заказ");
-        JButton nextButton = createSecondaryButton("Следующий статус");
-        JButton rollbackButton = createSecondaryButton("Откатить статус");
-        JButton cancelButton = createSecondaryButton("Отменить заказ");
+        JButton addButton = createButton("Создать заказ");
+        JButton editButton = createButton("Редактировать заказ");
+        JButton nextButton = createButton("Следующий статус");
+        JButton rollbackButton = createButton("Откатить статус");
+        JButton cancelButton = createButton("Отменить заказ");
         JPanel topPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel headerPanel = new JPanel(new BorderLayout());
 
-        topPanel.setOpaque(false);
-        topPanel.add(createSearchPanel(orderSearchField), BorderLayout.NORTH);
+        JLabel headerLabel = new JLabel("Заказы");
+        headerLabel.setForeground(TEXT);
+        headerPanel.setBackground(PANEL);
+        topPanel.setBackground(PANEL);
+        headerPanel.add(headerLabel, BorderLayout.NORTH);
+        headerPanel.add(createSearchPanel(orderSearchField), BorderLayout.CENTER);
+        topPanel.add(headerPanel, BorderLayout.NORTH);
 
-        configureTable(orderTable);
+        setTable(orderTable);
         orderTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        bindSearch(orderSearchField, this::refreshOrderTable);
-        addButton.addActionListener(event -> showOrderDialog());
-        nextButton.addActionListener(event -> moveSelectedOrder());
-        rollbackButton.addActionListener(event -> rollbackSelectedOrder());
-        cancelButton.addActionListener(event -> cancelSelectedOrder());
+        bindSearch(orderSearchField, new Runnable() {
+            @Override
+            public void run() {
+                refreshOrderTable();
+            }
+        });
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                showOrderDialog(null);
+            }
+        });
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                editSelectedOrder();
+            }
+        });
+        nextButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                moveSelectedOrder();
+            }
+        });
+        rollbackButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                rollbackSelectedOrder();
+            }
+        });
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                cancelSelectedOrder();
+            }
+        });
 
         buttons.add(addButton);
+        buttons.add(editButton);
         buttons.add(nextButton);
         buttons.add(rollbackButton);
         buttons.add(cancelButton);
@@ -212,80 +226,52 @@ public class MainFrame extends JFrame implements DataChangeListener {
     }
 
     private JPanel createCardPanel(java.awt.LayoutManager layout) {
-        JPanel panel = new GraphiteCardPanel(layout);
-        panel.setBackground(CARD_BACKGROUND);
-        panel.setBorder(new EmptyBorder(20, 22, 20, 22));
+        JPanel panel = new JPanel(layout);
+        panel.setBackground(PANEL);
+        panel.setForeground(TEXT);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(LINE),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
         return panel;
     }
 
     private JPanel createActionPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        panel.setOpaque(false);
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panel.setBackground(PANEL);
+        panel.setForeground(TEXT);
         return panel;
     }
 
-    private JPanel createSummaryPanel() {
-        JPanel panel = createCardPanel(new BorderLayout());
-        summaryLabel.setFont(UI_FONT.deriveFont(Font.BOLD));
-        summaryLabel.setForeground(TEXT_MUTED);
-        panel.add(summaryLabel, BorderLayout.WEST);
-        return panel;
-    }
-
-    private JButton createModernButton(String text) {
-        JButton button = createBaseButton(text);
-        button.setBackground(BUTTON_BACKGROUND);
-        button.setForeground(APP_BACKGROUND_DEEP);
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent event) {
-                button.setBackground(BUTTON_HOVER);
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent event) {
-                button.setBackground(BUTTON_BACKGROUND);
-            }
-        });
-        return button;
-    }
-
-    private JButton createSecondaryButton(String text) {
-        JButton button = createBaseButton(text);
-        button.setBackground(SURFACE_BACKGROUND);
-        button.setForeground(TEXT_PRIMARY);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                new EmptyBorder(9, 16, 9, 16)
-        ));
-        button.setBorderPainted(true);
-        return button;
-    }
-
-    private JButton createBaseButton(String text) {
+    private JButton createButton(String text) {
         JButton button = new JButton(text);
+        button.setBackground(FIELD);
+        button.setForeground(TEXT);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setOpaque(true);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setFont(UI_FONT.deriveFont(Font.BOLD));
-        button.setBorder(new EmptyBorder(10, 18, 10, 18));
-        button.putClientProperty("JButton.buttonType", "roundRect");
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(LINE),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
         return button;
     }
 
     private JScrollPane createStyledScrollPane(JTable table) {
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-        scrollPane.getViewport().setBackground(SURFACE_BACKGROUND);
+        scrollPane.setBorder(BorderFactory.createLineBorder(LINE));
+        scrollPane.getViewport().setBackground(ROW_ONE);
         return scrollPane;
     }
 
     private JTextField createTextField(String placeholder) {
-        JTextField textField = new PromptTextField(placeholder);
-        textField.setFont(UI_FONT);
+        JTextField textField = new JTextField();
         textField.setToolTipText(placeholder);
-        styleTextField(textField);
+        textField.setBackground(FIELD);
+        textField.setForeground(TEXT);
+        textField.setCaretColor(TEXT);
+        textField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(LINE),
+                BorderFactory.createEmptyBorder(4, 6, 4, 6)
+        ));
         return textField;
     }
 
@@ -294,10 +280,15 @@ public class MainFrame extends JFrame implements DataChangeListener {
     }
 
     private JTextField createIntegerField(String placeholder, int columns) {
-        JTextField textField = new PromptTextField(placeholder, columns);
-        textField.setFont(UI_FONT);
+        JTextField textField = new JTextField(columns);
         textField.setToolTipText(placeholder);
-        styleTextField(textField);
+        textField.setBackground(FIELD);
+        textField.setForeground(TEXT);
+        textField.setCaretColor(TEXT);
+        textField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(LINE),
+                BorderFactory.createEmptyBorder(4, 6, 4, 6)
+        ));
         ((AbstractDocument) textField.getDocument()).setDocumentFilter(new NumericDocumentFilter(false));
         return textField;
     }
@@ -308,25 +299,6 @@ public class MainFrame extends JFrame implements DataChangeListener {
         return textField;
     }
 
-    private void styleTextField(JTextField textField) {
-        textField.setBackground(SURFACE_BACKGROUND);
-        textField.setForeground(TEXT_PRIMARY);
-        textField.setCaretColor(TEXT_PRIMARY);
-        textField.setSelectionColor(SURFACE_ELEVATED);
-        textField.setSelectedTextColor(TEXT_PRIMARY);
-        textField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                new EmptyBorder(9, 12, 9, 12)
-        ));
-    }
-
-    private void styleComboBox(JComboBox<?> comboBox) {
-        comboBox.setFont(UI_FONT);
-        comboBox.setBackground(SURFACE_BACKGROUND);
-        comboBox.setForeground(TEXT_PRIMARY);
-        comboBox.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-    }
-
     private JTextField createPhoneField() {
         JTextField phoneField = createTextField("+ и 4–15 цифр, например: +4915112345678");
         ((AbstractDocument) phoneField.getDocument()).setDocumentFilter(new PhoneDocumentFilter());
@@ -334,23 +306,79 @@ public class MainFrame extends JFrame implements DataChangeListener {
     }
 
     private JPanel createSearchPanel(JTextField searchField) {
-        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        JPanel panel = new JPanel(new BorderLayout());
         JLabel label = new JLabel("Поиск:");
-
-        panel.setOpaque(false);
-        label.setFont(UI_FONT.deriveFont(Font.BOLD));
-        label.setForeground(TEXT_MUTED);
+        panel.setBackground(PANEL);
+        label.setForeground(TEXT);
         panel.add(label, BorderLayout.WEST);
         panel.add(searchField, BorderLayout.CENTER);
         return panel;
     }
 
 
-    private JLabel createFormLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(UI_FONT.deriveFont(Font.BOLD));
-        label.setForeground(TEXT_MUTED);
-        return label;
+    private void findCategory(JTextField searchField, JComboBox<FurnitureCategory> categoryBox) {
+        FurnitureCategory oldCategory = (FurnitureCategory) categoryBox.getSelectedItem();
+        String text = searchField.getText().trim().toLowerCase();
+        DefaultComboBoxModel<FurnitureCategory> model = new DefaultComboBoxModel<>();
+
+        for (FurnitureCategory category : FurnitureCategory.values()) {
+            String code = category.name().toLowerCase();
+            String name = category.toString().toLowerCase();
+            if (text.isEmpty() || code.contains(text) || name.contains(text)) {
+                model.addElement(category);
+            }
+        }
+
+        categoryBox.setModel(model);
+        if (oldCategory != null && hasCategory(model, oldCategory)) {
+            categoryBox.setSelectedItem(oldCategory);
+        } else {
+            if (model.getSize() > 0) {
+                categoryBox.setSelectedIndex(0);
+            }
+        }
+    }
+
+    private boolean hasCategory(DefaultComboBoxModel<FurnitureCategory> model, FurnitureCategory category) {
+        for (int i = 0; i < model.getSize(); i++) {
+            if (model.getElementAt(i) == category) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    private void setColors(Component item) {
+        if (item instanceof JPanel) {
+            item.setBackground(PANEL);
+            item.setForeground(TEXT);
+        }
+        if (item instanceof JLabel) {
+            item.setForeground(TEXT);
+        }
+        if (item instanceof JCheckBox) {
+            item.setBackground(PANEL);
+            item.setForeground(TEXT);
+        }
+        if (item instanceof JTextField) {
+            item.setBackground(FIELD);
+            item.setForeground(TEXT);
+        }
+        if (item instanceof JComboBox) {
+            item.setBackground(FIELD);
+            item.setForeground(TEXT);
+        }
+        if (item instanceof JScrollPane) {
+            item.setBackground(PANEL);
+            item.setForeground(TEXT);
+        }
+        if (item instanceof Container) {
+            Component[] childList = ((Container) item).getComponents();
+            for (Component child : childList) {
+                setColors(child);
+            }
+        }
     }
 
     private void bindSearch(JTextField searchField, Runnable refreshAction) {
@@ -372,53 +400,64 @@ public class MainFrame extends JFrame implements DataChangeListener {
         });
     }
 
-    private void configureTable(JTable table) {
-        table.setFont(UI_FONT);
-        table.setForeground(TEXT_PRIMARY);
-        table.setBackground(SURFACE_BACKGROUND);
-        table.setGridColor(new Color(53, 55, 60));
-        table.setRowHeight(34);
-        table.setShowVerticalLines(false);
-        table.setSelectionBackground(SURFACE_ELEVATED);
-        table.setSelectionForeground(TEXT_PRIMARY);
-        table.setFillsViewportHeight(true);
-        table.setIntercellSpacing(new Dimension(0, 1));
-        table.setAutoCreateRowSorter(false);
-        table.setRowSorter(null);
-
-        JTableHeader header = table.getTableHeader();
-        header.setFont(UI_FONT.deriveFont(Font.BOLD));
-        header.setBackground(new Color(28, 29, 32));
-        header.setForeground(TEXT_PRIMARY);
-        header.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-        header.setReorderingAllowed(false);
-
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+    private void setTable(JTable table) {
+        DefaultTableCellRenderer cell = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
                                                            boolean hasFocus, int row, int column) {
-                Component component = super.getTableCellRendererComponent(
-                        table, value, isSelected, hasFocus, row, column);
-                component.setFont(UI_FONT);
-                setBorder(new EmptyBorder(0, 12, 0, 12));
-                if (!isSelected) {
-                    component.setBackground(row % 2 == 0 ? SURFACE_BACKGROUND : TABLE_STRIPE);
-                    component.setForeground(TEXT_PRIMARY);
+                Component item = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setHorizontalAlignment(SwingConstants.CENTER);
+                setOpaque(true);
+                item.setForeground(TEXT);
+                if (isSelected) {
+                    item.setBackground(SELECT);
+                } else {
+                    if (row % 2 == 0) {
+                        item.setBackground(ROW_ONE);
+                    } else {
+                        item.setBackground(ROW_TWO);
+                    }
                 }
-                return component;
+                return item;
             }
-        });
+        };
+        DefaultTableCellRenderer head = new DefaultTableCellRenderer();
+        head.setHorizontalAlignment(SwingConstants.CENTER);
+        head.setOpaque(true);
+        head.setBackground(DARK);
+        head.setForeground(TEXT);
+
+        table.setDefaultRenderer(Object.class, cell);
+        table.setDefaultRenderer(Number.class, cell);
+        table.getTableHeader().setDefaultRenderer(head);
+        table.getTableHeader().setBackground(DARK);
+        table.getTableHeader().setForeground(TEXT);
+        table.setBackground(ROW_ONE);
+        table.setForeground(TEXT);
+        table.setGridColor(LINE);
+        table.setRowHeight(28);
+        table.setSelectionBackground(SELECT);
+        table.setSelectionForeground(TEXT);
+        table.setShowVerticalLines(false);
+        table.setFillsViewportHeight(true);
+        table.setAutoCreateRowSorter(false);
+        table.setRowSorter(null);
     }
 
     private void showFurnitureDialog(Furniture furniture) {
         JTextField nameField = createTextField("Например: Диван Oslo");
         JTextField descriptionField = createTextField("Особенности: цвет, покрытие, форма, ножки и т.д.");
         JTextField priceField = createDecimalField("Только цифры, например: 55900");
+        JTextField categorySearchField = createSearchField("Поиск категории...");
         JComboBox<FurnitureCategory> categoryBox = new JComboBox<>(FurnitureCategory.values());
         JComboBox<FurnitureStatus> statusBox = new JComboBox<>(FurnitureStatus.values());
 
-        styleComboBox(categoryBox);
-        styleComboBox(statusBox);
+        bindSearch(categorySearchField, new Runnable() {
+            @Override
+            public void run() {
+                findCategory(categorySearchField, categoryBox);
+            }
+        });
 
         if (furniture != null) {
             nameField.setText(furniture.getName());
@@ -429,20 +468,21 @@ public class MainFrame extends JFrame implements DataChangeListener {
         }
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 10, 10));
-        panel.setBackground(CARD_BACKGROUND);
-        panel.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
-        panel.add(createFormLabel("Название:"));
+        panel.add(new JLabel("Название:"));
         panel.add(nameField);
-        panel.add(createFormLabel("Описание:"));
+        panel.add(new JLabel("Описание:"));
         panel.add(descriptionField);
-        panel.add(createFormLabel("Категория:"));
+        panel.add(new JLabel("Поиск категории:"));
+        panel.add(categorySearchField);
+        panel.add(new JLabel("Категория:"));
         panel.add(categoryBox);
-        panel.add(createFormLabel("Стоимость:"));
+        panel.add(new JLabel("Стоимость:"));
         panel.add(priceField);
-        panel.add(createFormLabel("Статус:"));
+        panel.add(new JLabel("Статус:"));
         panel.add(statusBox);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Мебель", JOptionPane.OK_CANCEL_OPTION);
+        setColors(panel);
+        int result = showThemedConfirmDialog(this, panel, "Мебель", JOptionPane.OK_CANCEL_OPTION);
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
@@ -451,6 +491,9 @@ public class MainFrame extends JFrame implements DataChangeListener {
             double price = Double.parseDouble(normalizeDecimal(priceField.getText()));
             FurnitureCategory category = (FurnitureCategory) categoryBox.getSelectedItem();
             FurnitureStatus status = (FurnitureStatus) statusBox.getSelectedItem();
+            if (category == null) {
+                throw new IllegalArgumentException("Выберите категорию мебели.");
+            }
 
             if (furniture == null) {
                 facade.addFurniture(nameField.getText().trim(), category, price, status, descriptionField.getText().trim());
@@ -464,42 +507,39 @@ public class MainFrame extends JFrame implements DataChangeListener {
         }
     }
 
-    private void showOrderDialog() {
-        List<Furniture> availableFurniture = facade.getOrderAvailableFurniture();
-        if (availableFurniture.isEmpty()) {
+    private void showOrderDialog(Order order) {
+        List<Furniture> furnitureList = getFurnitureForOrderDialog(order);
+        if (furnitureList.isEmpty()) {
             showError("Нет доступной мебели для заказа.");
             return;
         }
 
         JTextField clientNameField = createTextField("ФИО клиента");
         JTextField phoneField = createPhoneField();
+        Map<Furniture, Integer> countMap = getSelectedQuantities(order);
+        if (order != null) {
+            clientNameField.setText(order.getClient().getFullName());
+            phoneField.setText(order.getClient().getPhone());
+        }
         JTextField furnitureSearch = createSearchField("Поиск мебели для заказа...");
         JPanel furniturePanel = new JPanel();
         furniturePanel.setLayout(new BoxLayout(furniturePanel, BoxLayout.Y_AXIS));
-        furniturePanel.setBackground(CARD_BACKGROUND);
         List<JCheckBox> checkBoxes = new ArrayList<>();
         List<JTextField> quantityFields = new ArrayList<>();
         List<JPanel> itemRows = new ArrayList<>();
 
-        for (Furniture furniture : availableFurniture) {
+        for (Furniture furniture : furnitureList) {
             JCheckBox checkBox = new JCheckBox(getFurnitureSelectionText(furniture));
             JTextField quantityField = createIntegerField("Кол-во", 4);
             JPanel itemRow = new JPanel(new BorderLayout(12, 0));
             JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
             JLabel quantityLabel = new JLabel("Кол-во:");
 
-            quantityField.setText("1");
-            checkBox.setBackground(CARD_BACKGROUND);
-            checkBox.setFont(UI_FONT);
-            checkBox.setForeground(TEXT_PRIMARY);
+            quantityField.setText(String.valueOf(countMap.getOrDefault(furniture, 1)));
+            checkBox.setSelected(countMap.containsKey(furniture));
             checkBox.setVerticalAlignment(JCheckBox.CENTER);
-            quantityLabel.setFont(UI_FONT);
-            quantityLabel.setForeground(TEXT_MUTED);
-            quantityPanel.setOpaque(false);
             quantityPanel.add(quantityLabel);
             quantityPanel.add(quantityField);
-            itemRow.setOpaque(false);
-            itemRow.setBorder(new EmptyBorder(4, 0, 4, 0));
             itemRow.setPreferredSize(new Dimension(720, 42));
             itemRow.setMinimumSize(new Dimension(0, 42));
             itemRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
@@ -511,52 +551,118 @@ public class MainFrame extends JFrame implements DataChangeListener {
             furniturePanel.add(itemRow);
         }
 
-        bindSearch(furnitureSearch, () -> filterOrderDialogFurniture(furnitureSearch, availableFurniture, itemRows, furniturePanel));
+        bindSearch(furnitureSearch, new Runnable() {
+            @Override
+            public void run() {
+                filterOrderDialogFurniture(furnitureSearch, furnitureList, itemRows, furniturePanel);
+            }
+        });
 
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBackground(CARD_BACKGROUND);
         JPanel clientPanel = new JPanel(new GridLayout(0, 2, 10, 10));
-        clientPanel.setBackground(CARD_BACKGROUND);
-        clientPanel.add(createFormLabel("Клиент:"));
+        clientPanel.add(new JLabel("Клиент:"));
         clientPanel.add(clientNameField);
-        clientPanel.add(createFormLabel("Телефон:"));
+        clientPanel.add(new JLabel("Телефон:"));
         clientPanel.add(phoneField);
         JPanel orderItemsPanel = new JPanel(new BorderLayout(0, 8));
         JScrollPane orderItemsScrollPane = new JScrollPane(furniturePanel);
 
-        orderItemsPanel.setOpaque(false);
         orderItemsScrollPane.setPreferredSize(new Dimension(760, 320));
         orderItemsScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        orderItemsScrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-        orderItemsScrollPane.getViewport().setBackground(CARD_BACKGROUND);
         orderItemsPanel.add(createSearchPanel(furnitureSearch), BorderLayout.NORTH);
         orderItemsPanel.add(orderItemsScrollPane, BorderLayout.CENTER);
         panel.add(clientPanel, BorderLayout.NORTH);
         panel.add(orderItemsPanel, BorderLayout.CENTER);
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Новый заказ", JOptionPane.OK_CANCEL_OPTION);
-        if (result != JOptionPane.OK_OPTION) {
-            return;
+        String dialogName;
+        String saveText;
+        if (order == null) {
+            dialogName = "Новый заказ";
+            saveText = "Создать";
+        } else {
+            dialogName = "Редактирование заказа";
+            saveText = "Сохранить";
         }
 
-        List<OrderItem> selectedItems = new ArrayList<>();
-        try {
-            for (int i = 0; i < checkBoxes.size(); i++) {
-                if (checkBoxes.get(i).isSelected()) {
-                    int quantity = Integer.parseInt(quantityFields.get(i).getText().trim());
-                    selectedItems.add(new OrderItem(availableFurniture.get(i), quantity));
+        JDialog dialog = new JDialog(this, dialogName, true);
+        JPanel dialogButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton createButton = createButton(saveText);
+        JButton cancelButton = createButton("Отмена");
+
+        createButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                List<OrderItem> itemList = new ArrayList<>();
+                try {
+                    for (int i = 0; i < checkBoxes.size(); i++) {
+                        if (checkBoxes.get(i).isSelected()) {
+                            int count = Integer.parseInt(quantityFields.get(i).getText().trim());
+                            itemList.add(new OrderItem(furnitureList.get(i), count));
+                        }
+                    }
+                    if (!isPhoneComplete(phoneField.getText())) {
+                        throw new IllegalArgumentException("Введите телефон в международном формате: плюс и от 4 до 15 цифр.");
+                    }
+                    if (order == null) {
+                        facade.createOrder(clientNameField.getText().trim(), phoneField.getText().trim(), itemList);
+                    } else {
+                        facade.updateOrder(order, clientNameField.getText().trim(), phoneField.getText().trim(), itemList);
+                    }
+                    dialog.dispose();
+                } catch (NumberFormatException exception) {
+                    showDialogError(dialog, "Количество должно быть целым числом.");
+                } catch (RuntimeException exception) {
+                    showDialogError(dialog, exception.getMessage());
                 }
             }
-            if (!isPhoneComplete(phoneField.getText())) {
-                throw new IllegalArgumentException("Введите телефон в международном формате: плюс и от 4 до 15 цифр.");
+        });
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                dialog.dispose();
             }
-            facade.createOrder(clientNameField.getText().trim(), phoneField.getText().trim(), selectedItems);
-        } catch (NumberFormatException exception) {
-            showError("Количество должно быть целым числом.");
-        } catch (RuntimeException exception) {
-            showError(exception.getMessage());
+        });
+        dialogButtons.add(createButton);
+        dialogButtons.add(cancelButton);
+
+        setColors(panel);
+        setColors(dialogButtons);
+        dialog.getContentPane().setBackground(PANEL);
+        dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.add(dialogButtons, BorderLayout.SOUTH);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+
+    private List<Furniture> getFurnitureForOrderDialog(Order order) {
+        List<Furniture> furniture = new ArrayList<>();
+        if (order != null) {
+            for (OrderItem item : order.getOrderItems()) {
+                if (!furniture.contains(item.getFurniture())) {
+                    furniture.add(item.getFurniture());
+                }
+            }
         }
+        for (Furniture item : facade.getOrderAvailableFurniture()) {
+            if (!furniture.contains(item)) {
+                furniture.add(item);
+            }
+        }
+        return furniture;
+    }
+
+    private Map<Furniture, Integer> getSelectedQuantities(Order order) {
+        Map<Furniture, Integer> countMap = new HashMap<>();
+        if (order == null) {
+            return countMap;
+        }
+        for (OrderItem item : order.getOrderItems()) {
+            countMap.put(item.getFurniture(), item.getQuantity());
+        }
+        return countMap;
     }
 
     private String getFurnitureSelectionText(Furniture furniture) {
@@ -600,14 +706,20 @@ public class MainFrame extends JFrame implements DataChangeListener {
             showError("Выберите мебель в таблице.");
             return;
         }
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Отправить мебель \"" + furniture.getName() + "\" в архив?",
-                "Подтверждение архивации",
-                JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            facade.archiveFurniture(furniture);
+        if (!confirmDo("Переместить мебель в архив?")) {
+            return;
         }
+        facade.archiveFurniture(furniture);
+    }
+
+
+    private void editSelectedOrder() {
+        Order order = getSelectedOrder();
+        if (order == null) {
+            showError("Выберите заказ в таблице.");
+            return;
+        }
+        showOrderDialog(order);
     }
 
     private void moveSelectedOrder() {
@@ -617,16 +729,10 @@ public class MainFrame extends JFrame implements DataChangeListener {
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Перевести заказ №" + order.getShortId() + " в следующий статус?",
-                "Подтверждение действия",
-                JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                facade.moveOrderToNextState(order);
-            } catch (RuntimeException exception) {
-                showError(exception.getMessage());
-            }
+        try {
+            facade.moveOrderToNextState(order);
+        } catch (RuntimeException exception) {
+            showError(exception.getMessage());
         }
     }
 
@@ -637,16 +743,10 @@ public class MainFrame extends JFrame implements DataChangeListener {
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Откатить статус заказа №" + order.getShortId() + " к предыдущему?",
-                "Подтверждение действия",
-                JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                facade.rollbackOrderState(order);
-            } catch (RuntimeException exception) {
-                showError(exception.getMessage());
-            }
+        try {
+            facade.rollbackOrderState(order);
+        } catch (RuntimeException exception) {
+            showError(exception.getMessage());
         }
     }
 
@@ -656,17 +756,14 @@ public class MainFrame extends JFrame implements DataChangeListener {
             showError("Выберите заказ в таблице.");
             return;
         }
+        if (!confirmDo("Отменить выбранный заказ?")) {
+            return;
+        }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Отменить заказ №" + order.getShortId() + "? Это действие необратимо.",
-                "Подтверждение отмены",
-                JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                facade.cancelOrder(order);
-            } catch (RuntimeException exception) {
-                showError(exception.getMessage());
-            }
+        try {
+            facade.cancelOrder(order);
+        } catch (RuntimeException exception) {
+            showError(exception.getMessage());
         }
     }
 
@@ -675,7 +772,7 @@ public class MainFrame extends JFrame implements DataChangeListener {
         if (row < 0) {
             return null;
         }
-        return displayedFurniture.get(row);
+        return shownFurniture.get(row);
     }
 
     private Order getSelectedOrder() {
@@ -683,13 +780,12 @@ public class MainFrame extends JFrame implements DataChangeListener {
         if (row < 0) {
             return null;
         }
-        return displayedOrders.get(row);
+        return shownOrders.get(row);
     }
 
     private void refreshTables() {
         refreshFurnitureTable();
         refreshOrderTable();
-        summaryLabel.setText("Мебели в каталоге: " + facade.getAllFurniture().size() + "   •   Заказов: " + facade.getAllOrders().size());
     }
 
     private void refreshFurnitureTable() {
@@ -701,12 +797,12 @@ public class MainFrame extends JFrame implements DataChangeListener {
         };
         String query = furnitureSearchField.getText().trim().toLowerCase();
 
-        displayedFurniture.clear();
+        shownFurniture.clear();
         for (Furniture furniture : facade.getAllFurniture()) {
             if (!matchesFurniture(furniture, query)) {
                 continue;
             }
-            displayedFurniture.add(furniture);
+            shownFurniture.add(furniture);
             model.addRow(new Object[]{
                     furniture.getName(),
                     furniture.getDescription(),
@@ -728,12 +824,12 @@ public class MainFrame extends JFrame implements DataChangeListener {
         };
         String query = orderSearchField.getText().trim().toLowerCase();
 
-        displayedOrders.clear();
+        shownOrders.clear();
         for (Order order : facade.getAllOrders()) {
             if (!matchesOrder(order, query)) {
                 continue;
             }
-            displayedOrders.add(order);
+            shownOrders.add(order);
             model.addRow(new Object[]{
                     order.getShortId(),
                     order.getClient().getFullName(),
@@ -750,17 +846,22 @@ public class MainFrame extends JFrame implements DataChangeListener {
     }
 
     private void updateOrderTableRowHeights() {
-        for (int row = 0; row < displayedOrders.size(); row++) {
-            int itemCount = Math.max(1, displayedOrders.get(row).getOrderItems().size());
+        for (int row = 0; row < shownOrders.size(); row++) {
+            int itemCount = Math.max(1, shownOrders.get(row).getOrderItems().size());
             orderTable.setRowHeight(row, Math.max(34, itemCount * 20 + 14));
         }
     }
 
     private String getOrderItemsHtml(Order order) {
-        return "<html>" + order.getOrderItems().stream()
-                .map(OrderItem::getDescription)
-                .map(this::escapeHtml)
-                .collect(Collectors.joining("<br>")) + "</html>";
+        StringBuilder text = new StringBuilder("<html>");
+        for (OrderItem item : order.getOrderItems()) {
+            if (text.length() > "<html>".length()) {
+                text.append("<br>");
+            }
+            text.append(escapeHtml(item.getDescription()));
+        }
+        text.append("</html>");
+        return text.toString();
     }
 
     private String escapeHtml(String value) {
@@ -836,126 +937,18 @@ public class MainFrame extends JFrame implements DataChangeListener {
         }
     }
 
+    private boolean confirmDo(String message) {
+        return showThemedConfirmDialog(this, message, "Подтверждение", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+    }
+
     private void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Ошибка", JOptionPane.ERROR_MESSAGE);
+        showDialogError(this, message);
     }
 
-
-    private static class PaintedPanel extends JPanel {
-        PaintedPanel(LayoutManager layout) {
-            super(layout);
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            Graphics2D g = (Graphics2D) graphics.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setPaint(new GradientPaint(0, 0, APP_BACKGROUND, getWidth(), getHeight(), APP_BACKGROUND_DEEP));
-            g.fillRect(0, 0, getWidth(), getHeight());
-            g.setColor(INK_ACCENT);
-            g.setComposite(AlphaComposite.SrcOver.derive(0.10f));
-            for (int x = -getHeight(); x < getWidth(); x += 72) {
-                g.drawLine(x, getHeight(), x + getHeight(), 0);
-            }
-            g.setComposite(AlphaComposite.SrcOver.derive(0.06f));
-            g.setColor(Color.WHITE);
-            g.fillOval(getWidth() - 280, 28, 360, 360);
-            g.setComposite(AlphaComposite.SrcOver);
-            g.dispose();
-            super.paintComponent(graphics);
-        }
+    private void showDialogError(Component parent, String message) {
+        showThemedMessageDialog(parent, message, "Ошибка", JOptionPane.ERROR_MESSAGE);
     }
 
-    private static class GraphiteCardPanel extends JPanel {
-        GraphiteCardPanel(LayoutManager layout) {
-            super(layout);
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            Graphics2D g = (Graphics2D) graphics.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setPaint(new GradientPaint(0, 0, CARD_BACKGROUND_ALT, 0, getHeight(), CARD_BACKGROUND));
-            g.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 28, 28);
-            g.setColor(new Color(255, 255, 255, 18));
-            g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 28, 28);
-            g.setColor(new Color(255, 255, 255, 10));
-            g.drawLine(22, 1, Math.max(22, getWidth() - 22), 1);
-            g.dispose();
-            super.paintComponent(graphics);
-        }
-    }
-
-    private static class GraphiteTabbedPaneUI extends BasicTabbedPaneUI {
-        @Override
-        protected void installDefaults() {
-            super.installDefaults();
-            tabAreaInsets = new Insets(0, 0, 8, 0);
-            tabInsets = new Insets(10, 22, 10, 22);
-            selectedTabPadInsets = new Insets(0, 0, 0, 0);
-        }
-
-        @Override
-        protected void paintTabBackground(Graphics graphics, int tabPlacement, int tabIndex, int x, int y, int width, int height, boolean isSelected) {
-            Graphics2D g = (Graphics2D) graphics.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(isSelected ? BUTTON_BACKGROUND : SURFACE_BACKGROUND);
-            g.fillRoundRect(x + 2, y + 2, width - 4, height - 4, 22, 22);
-            g.dispose();
-        }
-
-        @Override
-        protected void paintTabBorder(Graphics graphics, int tabPlacement, int tabIndex, int x, int y, int width, int height, boolean isSelected) {
-            Graphics2D g = (Graphics2D) graphics.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(isSelected ? BUTTON_BACKGROUND : BORDER_COLOR);
-            g.drawRoundRect(x + 2, y + 2, width - 5, height - 5, 22, 22);
-            g.dispose();
-        }
-
-        @Override
-        protected void paintContentBorder(Graphics graphics, int tabPlacement, int selectedIndex) {
-            // Cards already draw the content boundary.
-        }
-
-        @Override
-        protected void paintText(Graphics graphics, int tabPlacement, Font font, FontMetrics metrics, int tabIndex, String title, Rectangle textRect, boolean isSelected) {
-            graphics.setFont(font);
-            graphics.setColor(isSelected ? APP_BACKGROUND_DEEP : TEXT_PRIMARY);
-            graphics.drawString(title, textRect.x, textRect.y + metrics.getAscent());
-        }
-    }
-
-    private static class PromptTextField extends JTextField {
-        private final String prompt;
-
-        PromptTextField(String prompt) {
-            this(prompt, 0);
-        }
-
-        PromptTextField(String prompt, int columns) {
-            super(columns);
-            this.prompt = prompt;
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            super.paintComponent(graphics);
-            if (!getText().isEmpty()) {
-                return;
-            }
-
-            Graphics2D graphics2D = (Graphics2D) graphics.create();
-            graphics2D.setColor(PROMPT_TEXT);
-            graphics2D.setFont(getFont().deriveFont(Font.ITALIC));
-            int leftInset = getInsets().left;
-            int top = (getHeight() - getFontMetrics(getFont()).getHeight()) / 2 + getFontMetrics(getFont()).getAscent();
-            graphics2D.drawString(prompt, leftInset + 2, top);
-            graphics2D.dispose();
-        }
-    }
 
     private static class NumericDocumentFilter extends DocumentFilter {
         private final boolean decimalAllowed;
@@ -972,7 +965,11 @@ public class MainFrame extends JFrame implements DataChangeListener {
         @Override
         public void replace(FilterBypass filterBypass, int offset, int length, String text, AttributeSet attributeSet) throws BadLocationException {
             String currentText = filterBypass.getDocument().getText(0, filterBypass.getDocument().getLength());
-            String newText = currentText.substring(0, offset) + (text == null ? "" : text) + currentText.substring(offset + length);
+            String addText = "";
+            if (text != null) {
+                addText = text;
+            }
+            String newText = currentText.substring(0, offset) + addText + currentText.substring(offset + length);
             if (isValid(newText)) {
                 super.replace(filterBypass, offset, length, text, attributeSet);
             }
@@ -1001,7 +998,11 @@ public class MainFrame extends JFrame implements DataChangeListener {
         @Override
         public void replace(FilterBypass filterBypass, int offset, int length, String text, AttributeSet attributeSet) throws BadLocationException {
             String currentText = filterBypass.getDocument().getText(0, filterBypass.getDocument().getLength());
-            String candidate = currentText.substring(0, offset) + (text == null ? "" : text) + currentText.substring(offset + length);
+            String addText = "";
+            if (text != null) {
+                addText = text;
+            }
+            String candidate = currentText.substring(0, offset) + addText + currentText.substring(offset + length);
             if (isValid(candidate)) {
                 super.replace(filterBypass, offset, length, text, attributeSet);
             }
@@ -1018,5 +1019,31 @@ public class MainFrame extends JFrame implements DataChangeListener {
             int digitCount = phoneBody.length();
             return digitCount <= MAX_PHONE_DIGITS && phoneBody.matches("\\d*");
         }
+    }
+
+    private void styleDialog(Window dialog) {
+        dialog.setBackground(PANEL);
+        setColors(dialog);
+        if (dialog instanceof JDialog) {
+            ((JDialog) dialog).getContentPane().setBackground(PANEL);
+        }
+    }
+
+    private int showThemedConfirmDialog(Component parent, Object message, String title, int optionType) {
+        JOptionPane pane = new JOptionPane(message, JOptionPane.QUESTION_MESSAGE, optionType);
+        JDialog dialog = pane.createDialog(parent, title);
+        styleDialog(dialog);
+        dialog.setVisible(true);
+        Object selectedValue = pane.getValue();
+        if (selectedValue == null) return JOptionPane.CLOSED_OPTION;
+        if (selectedValue instanceof Integer) return (Integer) selectedValue;
+        return JOptionPane.CLOSED_OPTION;
+    }
+
+    private void showThemedMessageDialog(Component parent, Object message, String title, int messageType) {
+        JOptionPane pane = new JOptionPane(message, messageType);
+        JDialog dialog = pane.createDialog(parent, title);
+        styleDialog(dialog);
+        dialog.setVisible(true);
     }
 }

@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class Order implements Serializable {
     private final String id;
@@ -23,18 +22,14 @@ public class Order implements Serializable {
     private LocalDateTime updatedAt;
 
     public Order(Client client, List<Furniture> furnitureList) {
-        this(client, furnitureList.stream()
-                .map(furniture -> new OrderItem(furniture, 1))
-                .collect(Collectors.toList()), 0);
+        this(client, getItemsFromFurniture(furnitureList), 0);
     }
 
     private Order(Client client, List<OrderItem> orderItems, int ignored) {
         this.id = UUID.randomUUID().toString();
         this.client = client;
         this.orderItems = new ArrayList<>(orderItems);
-        this.furnitureList = orderItems.stream()
-                .map(OrderItem::furniture)
-                .collect(Collectors.toCollection(ArrayList::new));
+        this.furnitureList = getFurnitureList(orderItems);
         this.stateHistory = new ArrayList<>();
         this.state = new NewOrderState();
         this.createdAt = LocalDateTime.now();
@@ -54,12 +49,12 @@ public class Order implements Serializable {
     }
 
     public List<Furniture> getFurnitureList() {
-        ensureOrderItems();
+        checkOrderItems();
         return Collections.unmodifiableList(furnitureList);
     }
 
     public List<OrderItem> getOrderItems() {
-        ensureOrderItems();
+        checkOrderItems();
         return Collections.unmodifiableList(orderItems);
     }
 
@@ -68,19 +63,19 @@ public class Order implements Serializable {
     }
 
     public void setState(OrderState state) {
-        ensureStateHistory();
+        checkStateList();
         stateHistory.add(this.state);
         this.state = state;
         this.updatedAt = LocalDateTime.now();
     }
 
     public boolean canRollbackState() {
-        ensureStateHistory();
+        checkStateList();
         return !stateHistory.isEmpty();
     }
 
     public void rollbackState() {
-        ensureStateHistory();
+        checkStateList();
         if (stateHistory.isEmpty()) {
             throw new IllegalStateException("У заказа нет предыдущего статуса для отката.");
         }
@@ -104,12 +99,29 @@ public class Order implements Serializable {
         state.cancel(this);
     }
 
+    public void updateDetails(String clientName, String clientPhone, List<OrderItem> orderItems) {
+        if (clientName == null || clientName.isBlank()) {
+            throw new IllegalArgumentException("Введите имя клиента.");
+        }
+        if (clientPhone == null || clientPhone.isBlank()) {
+            throw new IllegalArgumentException("Введите телефон клиента.");
+        }
+        if (orderItems == null || orderItems.isEmpty()) {
+            throw new IllegalArgumentException("Выберите хотя бы одну позицию мебели.");
+        }
+        client.setFullName(clientName);
+        client.setPhone(clientPhone);
+        this.orderItems = new ArrayList<>(orderItems);
+        this.furnitureList = getFurnitureList(orderItems);
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public boolean isFinished() {
         return state.isFinished();
     }
 
     public double getTotalPrice() {
-        ensureOrderItems();
+        checkOrderItems();
         double totalPrice = 0;
         for (OrderItem item : orderItems) {
             totalPrice += item.getTotalPrice();
@@ -118,19 +130,24 @@ public class Order implements Serializable {
     }
 
     public int getTotalQuantity() {
-        ensureOrderItems();
+        checkOrderItems();
         int totalQuantity = 0;
         for (OrderItem item : orderItems) {
-            totalQuantity += item.quantity();
+            totalQuantity += item.getQuantity();
         }
         return totalQuantity;
     }
 
     public String getItemsText() {
-        ensureOrderItems();
-        return orderItems.stream()
-                .map(OrderItem::getDescription)
-                .collect(Collectors.joining("; "));
+        checkOrderItems();
+        StringBuilder text = new StringBuilder();
+        for (OrderItem item : orderItems) {
+            if (text.length() > 0) {
+                text.append("; ");
+            }
+            text.append(item.getDescription());
+        }
+        return text.toString();
     }
 
     public String getShortId() {
@@ -141,7 +158,16 @@ public class Order implements Serializable {
         return createdAt.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
     }
 
-    private void ensureOrderItems() {
+
+    private static List<OrderItem> getItemsFromFurniture(List<Furniture> furnitureList) {
+        List<OrderItem> items = new ArrayList<>();
+        for (Furniture furniture : furnitureList) {
+            items.add(new OrderItem(furniture, 1));
+        }
+        return items;
+    }
+
+    private void checkOrderItems() {
         if (orderItems == null) {
             orderItems = new ArrayList<>();
             if (furnitureList != null) {
@@ -151,13 +177,20 @@ public class Order implements Serializable {
             }
         }
         if (furnitureList == null) {
-            furnitureList = orderItems.stream()
-                    .map(OrderItem::furniture)
-                    .collect(Collectors.toCollection(ArrayList::new));
+            furnitureList = getFurnitureList(orderItems);
         }
     }
 
-    private void ensureStateHistory() {
+
+    private static List<Furniture> getFurnitureList(List<OrderItem> orderItems) {
+        List<Furniture> result = new ArrayList<>();
+        for (OrderItem item : orderItems) {
+            result.add(item.getFurniture());
+        }
+        return result;
+    }
+
+    private void checkStateList() {
         if (stateHistory == null) {
             stateHistory = new ArrayList<>();
         }

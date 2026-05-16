@@ -7,10 +7,13 @@ import javax.swing.*;
 
 public class Main {
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            FurniStyleFacade facade = new FurniStyleFacade();
-            MainFrame frame = new MainFrame(facade);
-            frame.setVisible(true);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                FurniStyleFacade facade = new FurniStyleFacade();
+                MainFrame frame = new MainFrame(facade);
+                frame.setVisible(true);
+            }
         });
     }
 }
